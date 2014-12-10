@@ -84,6 +84,7 @@ Fields
 .. autoclass:: mongoengine.fields.MapField
 .. autoclass:: mongoengine.fields.ReferenceField
 .. autoclass:: mongoengine.fields.GenericReferenceField
+.. autoclass:: mongoengine.fields.CachedReferenceField
 .. autoclass:: mongoengine.fields.BinaryField
 .. autoclass:: mongoengine.fields.FileField
 .. autoclass:: mongoengine.fields.ImageField
@@ -94,6 +95,9 @@ Fields
 .. autoclass:: mongoengine.fields.PointField
 .. autoclass:: mongoengine.fields.LineStringField
 .. autoclass:: mongoengine.fields.PolygonField
+.. autoclass:: mongoengine.fields.MultiPointField
+.. autoclass:: mongoengine.fields.MultiLineStringField
+.. autoclass:: mongoengine.fields.MultiPolygonField
 .. autoclass:: mongoengine.fields.GridFSError
 .. autoclass:: mongoengine.fields.GridFSProxy
 .. autoclass:: mongoengine.fields.ImageGridFsProxy

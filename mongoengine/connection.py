@@ -18,7 +18,7 @@ _connections = {}
 _dbs = {}
 
 
-def register_connection(alias, name, host=None, port=None,
+def register_connection(alias, name=None, host=None, port=None,
                         read_preference=False,
                         username=None, password=None, authentication_source=None,
                         **kwargs):
@@ -40,7 +40,7 @@ def register_connection(alias, name, host=None, port=None,
     global _connection_settings
 
     conn_settings = {
-        'name': name,
+        'name': name or 'test',
         'host': host or 'localhost',
         'port': port or 27017,
         'read_preference': read_preference,
@@ -111,13 +111,14 @@ def get_connection(alias=DEFAULT_CONNECTION_NAME, reconnect=False):
 
         try:
             connection = None
-            connection_settings_iterator = ((alias, settings.copy()) for alias, settings in _connection_settings.iteritems())
-            for alias, connection_settings in connection_settings_iterator:
+            # check for shared connections
+            connection_settings_iterator = ((db_alias, settings.copy()) for db_alias, settings in _connection_settings.iteritems())
+            for db_alias, connection_settings in connection_settings_iterator:
                 connection_settings.pop('name', None)
                 connection_settings.pop('username', None)
                 connection_settings.pop('password', None)
-                if conn_settings == connection_settings and _connections.get(alias, None):
-                    connection = _connections[alias]
+                if conn_settings == connection_settings and _connections.get(db_alias, None):
+                    connection = _connections[db_alias]
                     break
 
             _connections[alias] = connection if connection else connection_class(**conn_settings)
@@ -144,7 +145,7 @@ def get_db(alias=DEFAULT_CONNECTION_NAME, reconnect=False):
     return _dbs[alias]
 
 
-def connect(db, alias=DEFAULT_CONNECTION_NAME, **kwargs):
+def connect(db=None, alias=DEFAULT_CONNECTION_NAME, **kwargs):
     """Connect to the database specified by the 'db' argument.
 
     Connection settings may be provided here as well if the database is not

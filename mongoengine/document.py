@@ -12,7 +12,7 @@ from mongoengine.common import _import_class
 from mongoengine.base import (DocumentMetaclass, TopLevelDocumentMetaclass,
                               BaseDocument, BaseDict, BaseList,
                               ALLOW_INHERITANCE, get_document)
-from mongoengine.errors import ValidationError
+from mongoengine.errors import ValidationError, InvalidQueryError, InvalidDocumentError
 from mongoengine.queryset import (OperationError, NotUniqueError,
                                   QuerySet, transform)
 from mongoengine.connection import get_db, DEFAULT_CONNECTION_NAME
@@ -143,13 +143,6 @@ class Document(BaseDocument):
         return property(fget, fset)
     pk = pk()
 
-    @property
-    def text_score(self):
-        """
-        Used for text searchs
-        """
-        return self._data.get('text_score')
-
     @classmethod
     def _get_db(cls):
         """Some Model using other db_alias"""
@@ -192,6 +185,44 @@ class Document(BaseDocument):
                 cls.ensure_indexes()
         return cls._collection
 
+    def modify(self, query={}, **update):
+        """Perform an atomic update of the document in the database and reload
+        the document object using updated version.
+
+        Returns True if the document has been updated or False if the document
+        in the database doesn't match the query.
+
+        .. note:: All unsaved changes that has been made to the document are
+            rejected if the method returns True.
+
+        :param query: the update will be performed only if the document in the
+            database matches the query
+        :param update: Django-style update keyword arguments
+        """
+
+        if self.pk is None:
+            raise InvalidDocumentError("The document does not have a primary key.")
+
+        id_field = self._meta["id_field"]
+        query = query.copy() if isinstance(query, dict) else query.to_query(self)
+
+        if id_field not in query:
+            query[id_field] = self.pk
+        elif query[id_field] != self.pk:
+            raise InvalidQueryError("Invalid document modify query: it must modify only this document.")
+
+        updated = self._qs(**query).modify(new=True, **update)
+        if updated is None:
+            return False
+
+        for field in self._fields_ordered:
+            setattr(self, field, self._reload(field, updated[field]))
+
+        self._changed_fields = updated._changed_fields
+        self._created = False
+
+        return True
+
     def save(self, force_insert=False, validate=True, clean=True,
              write_concern=None,  cascade=None, cascade_kwargs=None,
              _refs=None, save_condition=None, **kwargs):
@@ -219,6 +250,7 @@ class Document(BaseDocument):
         :param _refs: A list of processed references used in cascading saves
         :param save_condition: only perform save if matching record in db
             satisfies condition(s) (e.g., version number)
+
         .. versionchanged:: 0.5
             In existing documents it only saves changed fields using
             set / unset.  Saves are cascaded and any
@@ -253,6 +285,8 @@ class Document(BaseDocument):
 
         try:
             collection = self._get_collection()
+            if self._meta.get('auto_create_index', True):
+                self.ensure_indexes()
             if created:
                 if force_insert:
                     object_id = collection.insert(doc, **write_concern)
@@ -424,10 +458,11 @@ class Document(BaseDocument):
             user.switch_db('archive-db')
             user.save()
 
-        If you need to read from another database see
-        :class:`~mongoengine.context_managers.switch_db`
+        :param str db_alias: The database alias to use for saving the document
 
-        :param db_alias: The database alias to use for saving the document
+        .. seealso::
+            Use :class:`~mongoengine.context_managers.switch_collection`
+            if you need to read from another collection
         """
         with switch_db(self.__class__, db_alias) as cls:
             collection = cls._get_collection()
@@ -450,11 +485,12 @@ class Document(BaseDocument):
             user.switch_collection('old-users')
             user.save()
 
-        If you need to read from another database see
-        :class:`~mongoengine.context_managers.switch_db`
-
-        :param collection_name: The database alias to use for saving the
+        :param str collection_name: The database alias to use for saving the
             document
+
+        .. seealso::
+            Use :class:`~mongoengine.context_managers.switch_db`
+            if you need to read from another database
         """
         with switch_collection(self.__class__, collection_name) as cls:
             collection = cls._get_collection()
@@ -505,7 +541,13 @@ class Document(BaseDocument):
 
         for field in self._fields_ordered:
             if not fields or field in fields:
-                setattr(self, field, self._reload(field, obj[field]))
+                try:
+                    setattr(self, field, self._reload(field, obj[field]))
+                except KeyError:
+                    # If field is removed from the database while the object
+                    # is in memory, a reload would cause a KeyError
+                    # i.e. obj.update(unset__field=1) followed by obj.reload()
+                    delattr(self, field)
 
         self._changed_fields = obj._changed_fields
         self._created = False
@@ -594,7 +636,9 @@ class Document(BaseDocument):
         index_cls = cls._meta.get('index_cls', True)
 
         collection = cls._get_collection()
-        if collection.read_preference > 1:
+        # 746: when connection is via mongos, the read preference is not necessarily an indication that
+        # this code runs on a secondary
+        if not collection.is_mongos and collection.read_preference > 1:
             return
 
         # determine if an index which we are creating includes
@@ -631,7 +675,7 @@ class Document(BaseDocument):
         if cls._meta.get('abstract'):
             return []
 
-        # get all the base classes, subclasses and sieblings
+        # get all the base classes, subclasses and siblings
         classes = []
 
         def get_classes(cls):

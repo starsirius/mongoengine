@@ -5,6 +5,23 @@ Changelog
 
 Changes in 0.9.X - DEV
 ======================
+- Ensure Indexes before Each Save #812
+- Generate Unique Indices for Lists of EmbeddedDocuments #358
+- Sparse fields #515
+- write_concern not in params of Collection#remove #801
+- Better BaseDocument equality check when not saved #798
+- OperationError: Shard Keys are immutable. Tried to update id even though the document is not yet saved #771
+- with_limit_and_skip for count should default like in pymongo #759
+- Fix storing value of precision attribute in DecimalField #787
+- Set attribute to None does not work (at least for fields with default values) #734
+- Querying by a field defined in a subclass raises InvalidQueryError #744
+- Add Support For MongoDB 2.6.X's maxTimeMS #778
+- abstract shouldn't be inherited in EmbeddedDocument # 789
+- Allow specifying the '_cls' as a field for indexes #397
+- Stop ensure_indexes running on a secondaries unless connection is through mongos #746
+- Not overriding default values when loading a subset of fields #399
+- Saving document doesn't create new fields in existing collection #620
+- Added `Queryset.aggregate` wrapper to aggregation framework #703
 - Added support to show original model fields on to_json calls instead of db_field #697
 - Added Queryset.search_text to Text indexes searchs #700
 - Fixed tests for Django 1.7 #696
@@ -30,7 +47,7 @@ Changes in 0.9.X - DEV
 - Removing support for Django 1.4.x, pymongo 2.5.x, pymongo 2.6.x.
 - Removing support for Python < 2.6.6
 - Fixed $maxDistance location for geoJSON $near queries with MongoDB 2.6+ #664
-- QuerySet.modify() method to provide find_and_modify() like behaviour #677
+- QuerySet.modify() and Document.modify() methods to provide find_and_modify() like behaviour #677 #773
 - Added support for the using() method on a queryset #676
 - PYPY support #673
 - Connection pooling #674
@@ -43,10 +60,20 @@ Changes in 0.9.X - DEV
 - Workaround a dateutil bug #608
 - Conditional save for atomic-style operations #511
 - Allow dynamic dictionary-style field access #559
+- Increase email field length to accommodate new TLDs #726
+- index_cls is ignored when deciding to set _cls as index prefix #733
+- Make 'db' argument to connection optional #737
+- Allow atomic update for the entire `DictField` #742
+- Added MultiPointField, MultiLineField, MultiPolygonField
+- Fix multiple connections aliases being rewritten #748
+- Fixed a few instances where reverse_delete_rule was written as reverse_delete_rules. #791
+- Make `in_bulk()` respect `no_dereference()` #775
+- Handle None from model __str__; Fixes #753 #754
+
 
 Changes in 0.8.7
 ================
-- Calling reload on deleted / nonexistant documents raises DoesNotExist (#538)
+- Calling reload on deleted / nonexistent documents raises DoesNotExist (#538)
 - Stop ensure_indexes running on a secondaries (#555)
 - Fix circular import issue with django auth (#531) (#545)
 
@@ -59,7 +86,7 @@ Changes in 0.8.5
 - Fix multi level nested fields getting marked as changed (#523)
 - Django 1.6 login fix (#522) (#527)
 - Django 1.6 session fix (#509)
-- EmbeddedDocument._instance is now set when settng the attribute (#506)
+- EmbeddedDocument._instance is now set when setting the attribute (#506)
 - Fixed EmbeddedDocument with ReferenceField equality issue (#502)
 - Fixed GenericReferenceField serialization order (#499)
 - Fixed count and none bug (#498)
@@ -149,7 +176,7 @@ Changes in 0.8.0
 - Added `get_next_value` preview for SequenceFields (#319)
 - Added no_sub_classes context manager and queryset helper (#312)
 - Querysets now utilises a local cache
-- Changed __len__ behavour in the queryset (#247, #311)
+- Changed __len__ behaviour in the queryset (#247, #311)
 - Fixed querying string versions of ObjectIds issue with ReferenceField (#307)
 - Added $setOnInsert support for upserts (#308)
 - Upserts now possible with just query parameters (#309)
@@ -200,7 +227,7 @@ Changes in 0.8.0
 - Uses getlasterror to test created on updated saves (#163)
 - Fixed inheritance and unique index creation (#140)
 - Fixed reverse delete rule with inheritance (#197)
-- Fixed validation for GenericReferences which havent been dereferenced
+- Fixed validation for GenericReferences which haven't been dereferenced
 - Added switch_db context manager (#106)
 - Added switch_db method to document instances (#106)
 - Added no_dereference context manager (#82) (#61)
@@ -282,11 +309,11 @@ Changes in 0.7.2
 - Update index spec generation so its not destructive (#113)
 
 Changes in 0.7.1
-=================
+================
 - Fixed index spec inheritance (#111)
 
 Changes in 0.7.0
-=================
+================
 - Updated queryset.delete so you can use with skip / limit (#107)
 - Updated index creation allows kwargs to be passed through refs (#104)
 - Fixed Q object merge edge case (#109)
@@ -367,7 +394,7 @@ Changes in 0.6.12
 - Fixes error with _delta handling DBRefs
 
 Changes in 0.6.11
-==================
+=================
 - Fixed inconsistency handling None values field attrs
 - Fixed map_field embedded db_field issue
 - Fixed .save() _delta issue with DbRefs
@@ -447,7 +474,7 @@ Changes in 0.6.1
 - Fix for replicaSet connections
 
 Changes in 0.6
-================
+==============
 
 - Added FutureWarning to inherited classes not declaring 'allow_inheritance' as the default will change in 0.7
 - Added support for covered indexes when inheritance is off
@@ -535,8 +562,8 @@ Changes in v0.5
 - Updated default collection naming convention
 - Added Document Mixin support
 - Fixed queryet __repr__ mid iteration
-- Added hint() support, so cantell Mongo the proper index to use for the query
-- Fixed issue with inconsitent setting of _cls breaking inherited referencing
+- Added hint() support, so can tell Mongo the proper index to use for the query
+- Fixed issue with inconsistent setting of _cls breaking inherited referencing
 - Added help_text and verbose_name to fields to help with some form libs
 - Updated item_frequencies to handle embedded document lookups
 - Added delta tracking now only sets / unsets explicitly changed fields

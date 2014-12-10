@@ -4,7 +4,7 @@ Defining documents
 In MongoDB, a **document** is roughly equivalent to a **row** in an RDBMS. When
 working with relational databases, rows are stored in **tables**, which have a
 strict **schema** that the rows follow. MongoDB stores documents in
-**collections** rather than tables - the principle difference is that no schema
+**collections** rather than tables --- the principal difference is that no schema
 is enforced at a database level.
 
 Defining a document's schema
@@ -91,6 +91,12 @@ are as follows:
 * :class:`~mongoengine.fields.StringField`
 * :class:`~mongoengine.fields.URLField`
 * :class:`~mongoengine.fields.UUIDField`
+* :class:`~mongoengine.fields.PointField`
+* :class:`~mongoengine.fields.LineStringField`
+* :class:`~mongoengine.fields.PolygonField`
+* :class:`~mongoengine.fields.MultiPointField`
+* :class:`~mongoengine.fields.MultiLineStringField`
+* :class:`~mongoengine.fields.MultiPolygonField`
 
 Field arguments
 ---------------
@@ -165,15 +171,15 @@ arguments can be set on all fields:
             size = StringField(max_length=3, choices=SIZE)
 
 :attr:`help_text` (Default: None)
-    Optional help text to output with the field - used by form libraries
+    Optional help text to output with the field -- used by form libraries
 
 :attr:`verbose_name` (Default: None)
-    Optional human-readable name for the field - used by form libraries
+    Optional human-readable name for the field -- used by form libraries
 
 
 List fields
 -----------
-MongoDB allows the storage of lists of items. To add a list of items to a
+MongoDB allows storing lists of items. To add a list of items to a
 :class:`~mongoengine.Document`, use the :class:`~mongoengine.fields.ListField` field
 type. :class:`~mongoengine.fields.ListField` takes another field object as its first
 argument, which specifies which type elements may be stored within the list::
@@ -328,7 +334,7 @@ Its value can take any of the following constants:
   Any object's fields still referring to the object being deleted are removed
   (using MongoDB's "unset" operation), effectively nullifying the relationship.
 :const:`mongoengine.CASCADE`
-  Any object containing fields that are refererring to the object being deleted
+  Any object containing fields that are referring to the object being deleted
   are deleted first.
 :const:`mongoengine.PULL`
   Removes the reference to the object (using MongoDB's "pull" operation)
@@ -422,7 +428,7 @@ Document collections
 ====================
 Document classes that inherit **directly** from :class:`~mongoengine.Document`
 will have their own **collection** in the database. The name of the collection
-is by default the name of the class, coverted to lowercase (so in the example
+is by default the name of the class, converted to lowercase (so in the example
 above, the collection would be called `page`). If you need to change the name
 of the collection (e.g. to use MongoEngine with an existing database), then
 create a class dictionary attribute called :attr:`meta` on your document, and
@@ -465,8 +471,16 @@ Text indexes may be specified by prefixing the field name with a **$**. ::
     class Page(Document):
         title = StringField()
         rating = StringField()
+        created = DateTimeField()
         meta = {
-            'indexes': ['title', ('title', '-rating')]
+            'indexes': [
+                'title',
+                ('title', '-rating'),
+                {
+                    'fields': ['created'],
+                    'expireAfterSeconds': 3600
+                }
+            ]
         }
 
 If a dictionary is passed then the following options are available:
@@ -544,6 +558,9 @@ The following fields will explicitly add a "2dsphere" index:
     - :class:`~mongoengine.fields.PointField`
     - :class:`~mongoengine.fields.LineStringField`
     - :class:`~mongoengine.fields.PolygonField`
+    - :class:`~mongoengine.fields.MultiPointField`
+    - :class:`~mongoengine.fields.MultiLineStringField`
+    - :class:`~mongoengine.fields.MultiPolygonField`
 
 As "2dsphere" indexes can be part of a compound index, you may not want the
 automatic index but would prefer a compound index.  In this example we turn off
@@ -655,11 +672,11 @@ Shard keys
 ==========
 
 If your collection is sharded, then you need to specify the shard key as a tuple,
-using the :attr:`shard_key` attribute of :attr:`-mongoengine.Document.meta`.
+using the :attr:`shard_key` attribute of :attr:`~mongoengine.Document.meta`.
 This ensures that the shard key is sent with the query when calling the
 :meth:`~mongoengine.document.Document.save` or
 :meth:`~mongoengine.document.Document.update` method on an existing
-:class:`-mongoengine.Document` instance::
+:class:`~mongoengine.Document` instance::
 
     class LogEntry(Document):
         machine = StringField()
@@ -681,7 +698,7 @@ defined, you may subclass it and add any extra fields or methods you may need.
 As this is new class is not a direct subclass of
 :class:`~mongoengine.Document`, it will not be stored in its own collection; it
 will use the same collection as its superclass uses. This allows for more
-convenient and efficient retrieval of related documents - all you need do is
+convenient and efficient retrieval of related documents -- all you need do is
 set :attr:`allow_inheritance` to True in the :attr:`meta` data for a
 document.::
 
@@ -695,12 +712,12 @@ document.::
     class DatedPage(Page):
         date = DateTimeField()
 
-.. note:: From 0.8 onwards you must declare :attr:`allow_inheritance` defaults
+.. note:: From 0.8 onwards :attr:`allow_inheritance` defaults
           to False, meaning you must set it to True to use inheritance.
 
 Working with existing data
 --------------------------
-As MongoEngine no longer defaults to needing :attr:`_cls` you can quickly and
+As MongoEngine no longer defaults to needing :attr:`_cls`, you can quickly and
 easily get working with existing data.  Just define the document to match
 the expected schema in your database ::
 
@@ -723,7 +740,7 @@ Abstract classes
 
 If you want to add some extra functionality to a group of Document classes but
 you don't need or want the overhead of inheritance you can use the
-:attr:`abstract` attribute of :attr:`-mongoengine.Document.meta`.
+:attr:`abstract` attribute of :attr:`~mongoengine.Document.meta`.
 This won't turn on :ref:`document-inheritance` but will allow you to keep your
 code DRY::
 
