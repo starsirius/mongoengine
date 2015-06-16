@@ -55,6 +55,22 @@ class TransformTest(unittest.TestCase):
         update = transform.update(DicDoc, pull__dictField__test=doc)
         self.assertTrue(isinstance(update["$pull"]["dictField"]["test"], dict))
 
+    def test_transform_update_field_name_is_comparison_operator(self):
+        class Shoes(EmbeddedDocument):
+            size = FloatField()     # `size` is in MATCH_OPERATORS
+            brand = StringField()   # `brand` is not
+
+        class Human(Document):
+            age = IntField()
+            type = StringField()    # `type` is in MATCH_OPERATORS
+            shoes = EmbeddedDocumentField(Shoes)
+
+        #self.assertEqual(transform.update(Human, age__gt=10),
+        #                 {'$set': {'type': ''} })
+        #print transform.update(Human, age__gt=10)
+        print transform.update(Human, type='introversion')
+        print transform.update(Human, shoes__brand='NIKE')
+        print transform.update(Human, shoes__size=10.5)
 
     def test_query_field_name(self):
         """Ensure that the correct field name is used when querying.
