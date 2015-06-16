@@ -55,6 +55,25 @@ class TransformTest(unittest.TestCase):
         update = transform.update(DicDoc, pull__dictField__test=doc)
         self.assertTrue(isinstance(update["$pull"]["dictField"]["test"], dict))
 
+    def test_transform_update_field_name_is_match_operator(self):
+        class Shoes(EmbeddedDocument):
+            size  = FloatField()   # `size` is in MATCH_OPERATORS
+            brand = StringField()  # `brand` is not
+
+        class Human(Document):
+            age   = IntField()
+            type  = StringField()  # `type` is in MATCH_OPERATORS
+            shoes = EmbeddedDocumentField(Shoes)
+
+        self.assertEqual(transform.update(Human, type='introversion'),
+                         {'$set': {'type': 'introversion'}})
+        self.assertEqual(transform.update(Human, shoes__brand='NIKE'),
+                         {'$set': {'shoes.brand': 'NIKE'}})
+        self.assertEqual(transform.update(Human, shoes__size=10.5),
+                         {'$set': {'shoes.size': 10.5}})
+
+        # Raises an error if match operator isn't a valid field name
+        self.assertRaises(InvalidQueryError, lambda: transform.update(Human, age__gt=10))
 
     def test_query_field_name(self):
         """Ensure that the correct field name is used when querying.

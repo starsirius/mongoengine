@@ -194,8 +194,8 @@ def update(_doc_cls=None, **update):
                 op = "setOnInsert"
 
         match = None
-        if parts[-1] in COMPARISON_OPERATORS:
-            match = parts.pop()
+        #if parts[-1] in COMPARISON_OPERATORS:
+        #    match = parts.pop()
 
         if _doc_cls:
             # Switch field names to proper names [set in Field(name='foo')]
